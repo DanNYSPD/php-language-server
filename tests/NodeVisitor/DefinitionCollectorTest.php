@@ -30,6 +30,7 @@ class DefinitionCollectorTest extends TestCase
             'TestNamespace\\TestClass::staticTestMethod()',
             'TestNamespace\\TestClass->testMethod()',
             'TestNamespace\\TestTrait',
+            'TestNamespace\\TestTrait->test_trait_function()',#new 
             'TestNamespace\\TestInterface',
             'TestNamespace\\test_function()',
             'TestNamespace\\ChildClass',
@@ -49,6 +50,7 @@ class DefinitionCollectorTest extends TestCase
         $this->assertInstanceOf(Node\MethodDeclaration::class, $defNodes['TestNamespace\\TestClass::staticTestMethod()']);
         $this->assertInstanceOf(Node\MethodDeclaration::class, $defNodes['TestNamespace\\TestClass->testMethod()']);
         $this->assertInstanceOf(Node\Statement\TraitDeclaration::class, $defNodes['TestNamespace\\TestTrait']);
+        $this->assertInstanceOf(Node\MethodDeclaration::class, $defNodes['TestNamespace\\TestTrait->test_trait_function()']);
         $this->assertInstanceOf(Node\Statement\InterfaceDeclaration::class, $defNodes['TestNamespace\\TestInterface']);
         $this->assertInstanceOf(Node\Statement\FunctionDeclaration::class, $defNodes['TestNamespace\\test_function()']);
         $this->assertInstanceOf(Node\Statement\ClassDeclaration::class, $defNodes['TestNamespace\\ChildClass']);
