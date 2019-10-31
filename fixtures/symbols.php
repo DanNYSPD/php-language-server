@@ -63,6 +63,17 @@ class TestClass implements TestInterface
 
 trait TestTrait
 {
+    /**
+     * sa
+     *
+     * @return void
+     */
+    function test_trait_function(){
+
+    }
+    function test_trait_function_invoque(){
+        $this->test_trait_function();
+    }
 
 }
 
