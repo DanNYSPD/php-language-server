@@ -219,10 +219,44 @@ class DefinitionResolver
             && $propertyDeclaration->isStatic())
         );
 
-        if ($node instanceof Node\Statement\ClassDeclaration &&
+        if ($node instanceof Node\Statement\ClassDeclaration 
             // TODO - this should be better represented in the parser API
-            $node->classBaseClause !== null && $node->classBaseClause->baseClass !== null) {
-            $def->extends = [(string)$node->classBaseClause->baseClass->getResolvedName()];
+           ) {
+            $def->extends=[];
+            if( $node->classBaseClause !== null && $node->classBaseClause->baseClass !== null){
+                   $def->extends = [(string)$node->classBaseClause->baseClass->getResolvedName()];
+            }
+            
+            //it seems that interface methods are not resolved(I noticed this while I was working in trait feacture so)
+            // I tested, the problem with this code is that it duplicates the autocomplete,because interfaces methods must be implemented, is low probable that we are interested 
+            // to see (and autocomplete feacture), but it can be useful for traits (in case I use this attribute to get the traits-currently microsoft languahe server dont implenet this member)
+            /*
+             Note: This feacture is not needed , it leads to confusion since when  an interface is implemented we wish to go the closest definition, that means the implementation class 
+            if($node->classInterfaceClause !=null &&$node->classInterfaceClause->interfaceNameList !== null){
+                foreach ($node->classInterfaceClause->interfaceNameList->getValues() as $n) {
+                    $def->extends[] = (string)$n->getResolvedName();
+                }
+            }
+            */
+
+          
+            # We need to look for the "trait-use declaration" as a member declation in order to resolve the traits,
+            # After we resolved the trait,  I considered as a "parent" in the  "extends" array.
+            if($node->classMembers!=null &&
+                $node->classMembers->classMemberDeclarations !=null
+            ){
+              foreach ($node->classMembers->classMemberDeclarations as $declaration) {
+                  if($declaration instanceof Node\TraitUseClause){
+                        if($declaration->traitNameList !=null){
+                            foreach ($declaration->traitNameList->getValues() as $n) {
+                                #Note, I haven't figure out why getResolvedName() returns null on when the node parent is TraitUseClause
+                                $def->extends[] = (string)$n->getResolvedName();
+                            }
+                        }
+                  }
+              }
+            }
+           
         } elseif (
             $node instanceof Node\Statement\InterfaceDeclaration &&
             // TODO - this should be better represented in the parser API
@@ -232,6 +266,13 @@ class DefinitionResolver
             foreach ($node->interfaceBaseClause->interfaceNameList->getValues() as $n) {
                 $def->extends[] = (string)$n->getResolvedName();
             }
+        }else if( 
+            $node instanceof Node\Statement\TraitDeclaration &&
+            //$node->traitBaseClause!==null && # Unlike InterfaceDeclaration and ClassDeclaration, TraitDeclaration doesn't have a "XBaseClause", it has direct acces to its members(property traitMembers)
+            $node->traitMembers!==null
+            ){
+             //until now,TraitDeclaration doesnt't have a traitNameList property to resolve the imported traits (for composed traits)
+            
         }
 
         $def->symbolInformation = SymbolInformationFactory::fromNode($node, $fqn);
