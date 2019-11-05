@@ -19,7 +19,7 @@ const TEST_CONST = 123;
  * sint. Officia culpa pariatur laborum nostrud cupidatat consequat mollit.
  */
 class TestClass implements TestInterface
-{
+{    use TestTrait;
     /**
      * Anim labore veniam consectetur laboris minim quis aute aute esse nulla ad.
      *
@@ -63,18 +63,7 @@ class TestClass implements TestInterface
 
 trait TestTrait
 {
-    /**
-     * sa
-     *
-     * @return void
-     */
-    function test_trait_function(){
-
-    }
-    function test_trait_function_invoque(){
-        $this->test_trait_function();
-    }
-
+    public function test_trait_function(){}
 }
 
 interface TestInterface
