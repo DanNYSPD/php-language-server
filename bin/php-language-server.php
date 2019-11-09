@@ -4,7 +4,7 @@ use LanguageServer\{LanguageServer, ProtocolStreamReader, ProtocolStreamWriter, 
 use Sabre\Event\Loop;
 use Composer\XdebugHandler\XdebugHandler;
 
-$options = getopt('', ['tcp::', 'tcp-server::', 'memory-limit::']);
+$options = getopt('', ['tcp::', 'tcp-server::', 'memory-limit::','exclude-paths::']);
 
 ini_set('memory_limit', $options['memory-limit'] ?? '4G');
 
@@ -50,7 +50,8 @@ if (!empty($options['tcp'])) {
     stream_set_blocking($socket, false);
     $ls = new LanguageServer(
         new ProtocolStreamReader($socket),
-        new ProtocolStreamWriter($socket)
+        new ProtocolStreamWriter($socket),
+        $options
     );
     Loop\run();
 } else if (!empty($options['tcp-server'])) {
@@ -83,7 +84,7 @@ if (!empty($options['tcp'])) {
                 $reader->on('close', function () use ($logger) {
                     $logger->debug('Connection closed');
                 });
-                $ls = new LanguageServer($reader, $writer);
+                $ls = new LanguageServer($reader, $writer,$options);
                 Loop\run();
                 // Just for safety
                 exit(0);
@@ -93,7 +94,8 @@ if (!empty($options['tcp'])) {
             // An exit notification will terminate the server
             $ls = new LanguageServer(
                 new ProtocolStreamReader($socket),
-                new ProtocolStreamWriter($socket)
+                new ProtocolStreamWriter($socket),
+                $options
             );
             Loop\run();
         }
@@ -104,7 +106,8 @@ if (!empty($options['tcp'])) {
     stream_set_blocking(STDIN, false);
     $ls = new LanguageServer(
         new ProtocolStreamReader(STDIN),
-        new ProtocolStreamWriter(STDOUT)
+        new ProtocolStreamWriter(STDOUT),
+        $options
     );
     Loop\run();
 }

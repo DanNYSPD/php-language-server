@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace LanguageServer;
 
+use Webmozart\Glob\Glob;
 use LanguageServer\Cache\Cache;
 use LanguageServer\FilesFinder\FilesFinder;
 use LanguageServer\Index\{DependenciesIndex, Index};
@@ -10,9 +11,11 @@ use LanguageServerProtocol\MessageType;
 use Webmozart\PathUtil\Path;
 use Sabre\Event\Promise;
 use function Sabre\Event\coroutine;
+use LanguageServer\Concerns\ExcludeUriTrait;
 
 class Indexer
 {
+    use ExcludeUriTrait;
     /**
      * @var int The prefix for every cache item
      */
@@ -95,6 +98,7 @@ class Indexer
         $this->composerJson = $composerJson;
     }
 
+   
     /**
      * Will read and parse the passed source files in the project and add them to the appropiate indexes
      *
@@ -105,6 +109,8 @@ class Indexer
         return coroutine(function () {
 
             $pattern = Path::makeAbsolute('**/*.php', $this->rootPath);
+            $this->client->window->logMessage(MessageType::INFO, "Pattern: $pattern");
+
             $uris = yield $this->filesFinder->find($pattern);
 
             $count = count($uris);
@@ -117,6 +123,10 @@ class Indexer
             $deps = [];
 
             foreach ($uris as $uri) {
+                if($this->isUriExcluded($uri)){
+                    $this->client->window->logMessage(MessageType::INFO, "The file $uri was excluded from being parsed");
+                    continue;
+                }
                 $packageName = getPackageName($uri, $this->composerJson);
                 if ($this->composerLock !== null && $packageName) {
                     // Dependency file

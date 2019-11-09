@@ -21,9 +21,13 @@ use Sabre\Event\Promise;
 use function Sabre\Event\coroutine;
 use Throwable;
 use Webmozart\PathUtil\Path;
+use LanguageServerProtocol\MessageType;
+
+use LanguageServer\Concerns\ExcludeUriTrait;
 
 class LanguageServer extends AdvancedJsonRpc\Dispatcher
 {
+    use ExcludeUriTrait;
     /**
      * Handles textDocument/* method calls
      *
@@ -105,13 +109,21 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
      * @var DefinitionResolver
      */
     protected $definitionResolver;
+    /**
+     * Options
+     *
+     * @var string[]
+     */
+    protected $options;
 
     /**
      * @param ProtocolReader  $reader
      * @param ProtocolWriter $writer
      */
-    public function __construct(ProtocolReader $reader, ProtocolWriter $writer)
+    public function __construct(ProtocolReader $reader, ProtocolWriter $writer,$options=[])
     {
+        $this->options=$options;
+
         parent::__construct($this, '/');
         $this->protocolReader = $reader;
         $this->protocolReader->on('close', function () {
@@ -171,7 +183,7 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
             $rootPath = uriToPath($rootUri);
         }
         return coroutine(function () use ($capabilities, $rootPath, $processId) {
-
+            $this->client->window->logMessage(MessageType::INFO,"rootPath: $rootPath");
             if ($capabilities->xfilesProvider) {
                 $this->filesFinder = new ClientFilesFinder($this->client);
             } else {
@@ -221,7 +233,20 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
                         $this->composerLock = json_decode(yield $this->contentRetriever->retrieve($composerLockFiles[0]));
                     }
                 }
+                $absolutesGlob=[];#we need absolute globs to be used.
 
+                if(isset($this->options['exclude-paths'])){
+                   
+                    if(\strpos($this->options['exclude-paths'],',')!==0){
+
+                        $arrExcludedPaths=  explode(',',$this->options['exclude-paths']);
+                        foreach ($arrExcludedPaths as $glob) {
+                            $absolutesGlob[]=  $this->resolveToAbsoluteGlob($glob, $rootPath);   
+
+                        }
+
+                    }
+                }
                 $cache = $capabilities->xcacheProvider ? new ClientCache($this->client) : new FileSystemCache;
 
                 // Index in background
@@ -236,6 +261,7 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
                     $this->composerLock,
                     $this->composerJson
                 );
+                $indexer->setExcludedPaths($absolutesGlob);
                 $indexer->index()->otherwise('\\LanguageServer\\crash');
             }
 
